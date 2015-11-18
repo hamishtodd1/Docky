@@ -49,7 +49,11 @@ function update_protein() {
 
 //this function won't alter the passed vectors
 protein.fix_to_anchors = function(desired_corner0,desired_corner1,desired_corner2) {
-	
+	var desired_vectors = new THREE.Matrix3(
+		desired_corner0.x,desired_corner0.y,desired_corner0.z,
+		desired_corner1.x,desired_corner1.y,desired_corner1.z,
+		desired_corner2.x,desired_corner2.y,desired_corner2.z);
+//	var current_vectors = 
 	
 	
 	
