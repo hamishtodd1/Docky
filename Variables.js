@@ -1,4 +1,5 @@
 var TAU = Math.PI * 2;
+var PHI = (1+Math.sqrt(5))/2;
 
 //--------------Technologically fundamental
 var playing_field_width = 6;
@@ -20,19 +21,27 @@ document.body.appendChild( renderer.domElement );
 var ourclock = new THREE.Clock( true );
 var delta_t = 0;
 
-//urgh do they need to be "children" or something? Would that compromise the buffer thing?
-var molecules;
+var logged = 0;
 
 //------------------Less fundamental
 var mouseblob;
+
+//urgh do they need to be "children" or something? Would that compromise the buffer thing?
+var molecules;
+
+var indicatorblob = new THREE.Vector3(0,0,0);
+
+var selected_object = 0; //i for anchor point i+1, 4 for protein
 
 var isMouseDown = false;
 var MousePosition = new THREE.Vector2(0,0);
 var OldMousePosition = new THREE.Vector2(0,0);
 var Mouse_delta = new THREE.Vector2(0,0);
 
-var protein;
-var demoshape;
+var NUMBER_OF_POINTS_IN_FUNDAMENTALDOMAIN = 119; //this may need updating ofc!
+var protein = new THREE.PointCloud( new THREE.BufferGeometry(), new THREE.PointCloudMaterial );
+var anchor_points = Array(3);
+var protein_colors = new Float32Array(NUMBER_OF_POINTS_IN_FUNDAMENTALDOMAIN * 9);
 
 //-------------These things should ONLY be referenced in Inputgetter
 var InputObject = {};
