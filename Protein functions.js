@@ -1,3 +1,6 @@
+//better for thinking about data if it's one protein per object, and maybe for animations.
+//But better for CK part?
+
 function update_protein() {
 	if(!isMouseDown) {
 		selected_object = 0;
@@ -10,89 +13,56 @@ function update_protein() {
 		if(selected_object == 0 ){ //nothing selected, we must select the thing
 			var mouse_dist_from_protein = Math.sqrt(Math.pow(MousePosition.x - protein.position.x,2) + Math.pow(MousePosition.y - protein.position.y,2));
 			var protein_radius = 2;
-			if(mouse_dist_from_protein < protein_radius)
-				selected_object = 4; //protein selected
-			
-			var anchor_point_radius = 0.1;
-			for(var i = 0; i<anchor_points.length; i++){
-				var mouse_dist_from_anchorpoint = Math.sqrt(Math.pow(MousePosition.x - anchor_points[i].position.x,2) + Math.pow(MousePosition.y - anchor_points[i].position.y,2));
-				if(mouse_dist_from_anchorpoint < anchor_point_radius)
-					selected_object = i+1;
-			}
+			selected_object = 4; //protein selected
 		}
 		
-//		if(selected_object == 4){
-////			protein.position.x+=Mouse_delta.x;
-////			protein.position.y+=Mouse_delta.y;
-//			var MovementVector = Mouse_delta.clone();
-//			var MovementAngle = MovementVector.length() / 3;
-//			
-//			var MovementAxis = new THREE.Vector3(-MovementVector.y, MovementVector.x, 0);
-//			MovementAxis.normalize();
-//			
-//			for(var i = 0; i<anchor_points.length; i++)
-//				anchor_points[i].position.applyAxisAngle(MovementAxis, MovementAngle);
-//		}
+		if(selected_object == 4){
+//			protein.position.x+=Mouse_delta.x;
+//			protein.position.y+=Mouse_delta.y;
+			var MovementVector = Mouse_delta.clone();
+			var MovementAngle = MovementVector.length() / 3;
+			
+			var MovementAxis = new THREE.Vector3(-MovementVector.y, MovementVector.x, 0);
+			MovementAxis.normalize();
+			
+			for(var i = 0; i<virtual_icosahedron_vertices.length; i++)
+				virtual_icosahedron_vertices[i].applyAxisAngle(MovementAxis, MovementAngle);
+		}
 		
 		if(selected_object == 1 || selected_object == 2 || selected_object == 3){
 			anchor_points[selected_object-1].material.color.r = 0;
-			
-			{
-				var moving_index = selected_object - 1;
-				anchor_points[moving_index].position.x = MousePosition.x;
-				anchor_points[moving_index].position.y = MousePosition.y;
-			}
+			var moving_index = selected_object - 1;
+			anchor_points[moving_index].position.x = MousePosition.x;
+			anchor_points[moving_index].position.y = MousePosition.y;
 		}
-		protein.fix_to_anchors(anchor_points[0].position.clone(), anchor_points[2].position.clone(), anchor_points[1].position.clone());
 	}
+//	fix_protein_to_anchors(anchor_points[0].position, anchor_points[1].position, anchor_points[2].position, protein);
+	for(var i = 0; i<protein_array.length; i++)
+		fix_protein_to_anchors(	virtual_icosahedron_vertices[protein_vertices_indices[i][0]],
+								virtual_icosahedron_vertices[protein_vertices_indices[i][1]],
+								virtual_icosahedron_vertices[protein_vertices_indices[i][2]], protein_array[i]);
 }
 
 //this function won't alter the passed vectors
-protein.fix_to_anchors = function(desired_corner0,desired_corner1,desired_corner2) {
-	var desired_vectors = new THREE.Matrix3(
-		desired_corner0.x,desired_corner0.y,desired_corner0.z,
-		desired_corner1.x,desired_corner1.y,desired_corner1.z,
-		desired_corner2.x,desired_corner2.y,desired_corner2.z);
-//	var current_vectors = 
+function fix_protein_to_anchors(desired_corner0,desired_corner1,desired_corner2, myprotein) {
+	var basis_vec1 = desired_corner1.clone();
+	basis_vec1.sub(desired_corner0);
+	var basis_vec2 = desired_corner2.clone();
+	basis_vec2.sub(desired_corner0);
+	var basis_vec0 = new THREE.Vector3();
+	//not normalizing (or anything like normalizing) this causes a kind of distortion in "z", but that is probably ok
+	basis_vec0.crossVectors(basis_vec1, basis_vec2);
 	
-	
-	
-	//could you do all this with matrices?
-    this.position.copy(desired_corner0);
-    this.updateMatrixWorld();
-    
-    var desired_corner1_local = desired_corner1.clone();
-    this.worldToLocal(desired_corner1_local);
-    
-    var firstangle = this.edge1.angleTo(desired_corner1_local);
-    if(firstangle > 0.0001){
-    	var firstaxis = this.edge1.clone();
-        firstaxis.cross(desired_corner1_local);
-        firstaxis.normalize();
-        
-    	this.rotateOnAxis(firstaxis,firstangle);
-        this.updateMatrixWorld();
-    }
-    
-    var undirected_secondaxis = this.edge1.clone();
-    undirected_secondaxis.normalize();
-    
-    var desired_corner2_local = desired_corner2.clone();
-    this.worldToLocal(desired_corner2_local);
-    var projected_desired_corner2 = vec_on_plane_perp_to_axis(desired_corner2_local, undirected_secondaxis);
-	var projected_current_corner2 = vec_on_plane_perp_to_axis(this.edge2, undirected_secondaxis);
-	
-	var secondangle = projected_desired_corner2.angleTo(projected_current_corner2 );
-	if(secondangle > 0.0001){
-		//possible speedup opportunity... could work this out from angle, considering sin.
-		var secondaxis = new THREE.Vector3();
-		secondaxis.crossVectors(projected_desired_corner2,projected_current_corner2);
-		secondaxis.normalize();
-		
-		this.rotateOnAxis(secondaxis,-secondangle);
-	    this.updateMatrixWorld();
+	for(var i = 0; i < protein.geometry.attributes.position.array.length / 3; i++){
+		myprotein.geometry.attributes.position.array[i*3+0] = atom_vertices_components[i][0] * basis_vec0.x + atom_vertices_components[i][1] * basis_vec1.x + atom_vertices_components[i][2] * basis_vec2.x;
+		myprotein.geometry.attributes.position.array[i*3+1] = atom_vertices_components[i][0] * basis_vec0.y + atom_vertices_components[i][1] * basis_vec1.y + atom_vertices_components[i][2] * basis_vec2.y;
+		myprotein.geometry.attributes.position.array[i*3+2] = atom_vertices_components[i][0] * basis_vec0.z + atom_vertices_components[i][1] * basis_vec1.z + atom_vertices_components[i][2] * basis_vec2.z;
 	}
-};
+	
+	myprotein.position.copy(desired_corner0);
+    myprotein.updateMatrixWorld();
+    myprotein.geometry.attributes.position.needsUpdate = true;
+}
 
 //assumes the plane of projection will go through the origin
 function vec_on_plane_perp_to_axis(point, axis_top){
@@ -101,76 +71,3 @@ function vec_on_plane_perp_to_axis(point, axis_top){
 	crosses.cross(axis_top);
 	return crosses; //length tells you nothing
 }
-
-//we want to make this a method associated with all the proteins
-//protein will always snap anchor0 to origin, anchor1 to axis, anchor2 to mover, so take care of that!
-//TODO: can clean up by making the protein's origin anchor0
-//purple, blue, yellow
-
-//better for thinking about data if it's one protein per object, and maybe for animations.
-//But better for CK part?
-//function fix_to_anchors(myprotein, anchor0_world,anchor1_world,anchor2_world) {
-//	var world_anchor0 = new THREE.Vector3();
-//	var world_anchor1 = new THREE.Vector3();
-//	var world_anchor2 = new THREE.Vector3();
-//	
-//	world_anchor0.copy(myprotein.anchor0);
-//	myprotein.localToWorld(world_anchor0);
-//	
-//	var firstmovement = anchor0_world.clone();
-//	firstmovement.sub(world_anchor0);
-//	myprotein.position.add(firstmovement);
-//	myprotein.updateMatrixWorld();
-//	
-//	var desired_edge = anchor1_world.clone();
-//	myprotein.worldToLocal(desired_edge);
-//	desired_edge.sub(myprotein.anchor0);
-//	var current_edge = myprotein.anchor1.clone();
-//	current_edge.sub(myprotein.anchor0);
-//	var cosfirstangle = desired_edge.dot(current_edge) / current_edge.length() / desired_edge.length();
-//	if( -1 < cosfirstangle && cosfirstangle < 1){
-//		var firstangle = -Math.acos(cosfirstangle);
-//		var firstaxis = new THREE.Vector3();
-//		firstaxis.crossVectors(desired_edge,current_edge);
-//		firstaxis.normalize();
-//		
-//		myprotein.translateOnAxis(myprotein.anchor0_unit,myprotein.anchor0_length);
-//		myprotein.rotateOnAxis(firstaxis, firstangle);
-//		myprotein.translateOnAxis(myprotein.anchor0_unit,-myprotein.anchor0_length);
-//		myprotein.updateMatrixWorld();
-//	}
-//	
-//	//ok so we project anchor2 and corner_mover onto our final axis, gets their hinge points, sub them, then get cross, dot, etc
-//	var axis_edge = new THREE.Vector3(); //guess you could just have this in there
-//	axis_edge.copy(myprotein.anchor1);
-//	axis_edge.sub(myprotein.anchor0);
-//	axis_edge.normalize();
-//	
-//	current_edge.copy(myprotein.anchor2);
-//	current_edge.sub(myprotein.anchor0);
-//	var current_edge_hingepoint = axis_edge.clone();
-//	current_edge_hingepoint.multiplyScalar(current_edge.dot(axis_edge));
-//	var current_edge_hinge = current_edge.clone();
-//	current_edge_hinge.sub(current_edge_hingepoint);
-//	
-//	desired_edge.copy(anchor2_world);
-//	myprotein.worldToLocal(desired_edge);
-//	desired_edge.sub(myprotein.anchor0);
-//	var desired_edge_hingepoint = axis_edge.clone();
-//	desired_edge_hingepoint.multiplyScalar(desired_edge.dot(axis_edge));
-//	var desired_edge_hinge = desired_edge.clone();
-//	desired_edge_hinge.sub(desired_edge_hingepoint);
-//	
-//	var cossecondangle = desired_edge.dot(current_edge) / current_edge.length() / desired_edge.length();
-//	if( -1 < cossecondangle && cossecondangle < 1){
-//		var lastangle = -Math.acos(cossecondangle);
-//		var lastaxis = new THREE.Vector3();
-//		lastaxis.crossVectors(desired_edge,current_edge);
-//		lastaxis.normalize();
-//		
-//		myprotein.translateOnAxis(myprotein.anchor0_unit,myprotein.anchor0_length);
-//		myprotein.rotateOnAxis(lastaxis, lastangle);
-//		myprotein.translateOnAxis(myprotein.anchor0_unit,-myprotein.anchor0_length);
-//		myprotein.updateMatrixWorld();
-//	}
-//}
