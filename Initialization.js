@@ -10,6 +10,27 @@ function Init(){
 	indicatorblob = new THREE.Mesh( new THREE.CircleGeometry( 0.1 ), new THREE.MeshBasicMaterial({color: 0xffffff}) );
 //	scene.add( indicatorblob );
 	
+	protein_vertices_indices[0]  = new Uint16Array([0,2,1]);
+	protein_vertices_indices[1]  = new Uint16Array([1,2,7]);  
+	protein_vertices_indices[2]  = new Uint16Array([2,8,7]);
+	protein_vertices_indices[3]  = new Uint16Array([8,11,7]);
+	protein_vertices_indices[4]  = new Uint16Array([0,3,2]);
+	protein_vertices_indices[5]  = new Uint16Array([3,8,2]);
+	protein_vertices_indices[6]  = new Uint16Array([9,8,3]);
+	protein_vertices_indices[7]  = new Uint16Array([9,11,8]);
+	protein_vertices_indices[8]  = new Uint16Array([4,3,0]);
+	protein_vertices_indices[9]  = new Uint16Array([4,9,3]);
+	protein_vertices_indices[10] = new Uint16Array([10,9,4]);
+	protein_vertices_indices[11] = new Uint16Array([11,9,10]);
+	protein_vertices_indices[12] = new Uint16Array([4,0,5]);
+	protein_vertices_indices[13] = new Uint16Array([10,4,5]);
+	protein_vertices_indices[14] = new Uint16Array([10,5,6]);
+	protein_vertices_indices[15] = new Uint16Array([11,10,6]);
+	protein_vertices_indices[16] = new Uint16Array([5,0,1]);
+	protein_vertices_indices[17] = new Uint16Array([5,1,6]);
+	protein_vertices_indices[18] = new Uint16Array([6,1,7]);
+	protein_vertices_indices[19] = new Uint16Array([6,7,11]);
+	
 	//Import protein
 	//We may wish to do this or that with it. You could skew the proteins upwards, which might give clear protuberances. But those might be unnoticeable and unnecessary given nice colors
 	{
@@ -124,25 +145,6 @@ function Init(){
 		var edgelen = virtual_icosahedron_vertices[0].distanceTo(virtual_icosahedron_vertices[1]);
 		lowest_unused_protein = 0;
 		
-		//it is certainly a non trivial question how you get the bunches of triangle vertices.
-		for(var i = 0; i< virtual_icosahedron_vertices.length; i++){
-			for(var j = i+1; j< virtual_icosahedron_vertices.length; j++){
-				if(Math.abs( virtual_icosahedron_vertices[i].distanceTo(virtual_icosahedron_vertices[j]) - edgelen ) > 0.00001 )
-					continue;
-				for(var k = j+1; k< virtual_icosahedron_vertices.length; k++){
-					if(Math.abs( virtual_icosahedron_vertices[k].distanceTo(virtual_icosahedron_vertices[i]) - edgelen ) > 0.00001 )
-						continue;
-					if(Math.abs( virtual_icosahedron_vertices[k].distanceTo(virtual_icosahedron_vertices[j]) - edgelen ) > 0.00001 )
-						continue;
-					
-					//no, you need to work out which way clockwise is and maybe swap them
-					//or really you should write it out, isn't that what we're going towards anyway?
-					protein_vertices_indices[lowest_unused_protein] = new Uint16Array([i,j,k]);
-					lowest_unused_protein++;
-				}
-			}
-		}
-		
 		for(var i = 0; i<protein_array.length; i++)
 			fix_protein_to_anchors(	virtual_icosahedron_vertices[protein_vertices_indices[i][0]],
 									virtual_icosahedron_vertices[protein_vertices_indices[i][1]],
@@ -165,7 +167,7 @@ function Init(){
 		scene.add( lights[0] );
 		scene.add( lights[1] );
 		scene.add( lights[2] );
-	}
+	}                              
 }
 
 function point_to_the_right_of_line(ourpointx,ourpointy,

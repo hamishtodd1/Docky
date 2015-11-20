@@ -16,6 +16,7 @@ camera.position.z = min_cameradist;
 var scene = new THREE.Scene();
 var renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize( window_width, window_height );
+renderer.setClearColor( 0xffffff, 1);
 document.body.appendChild( renderer.domElement );
 
 var ourclock = new THREE.Clock( true );
