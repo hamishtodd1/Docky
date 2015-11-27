@@ -39,13 +39,15 @@ var MousePosition = new THREE.Vector2(0,0);
 var OldMousePosition = new THREE.Vector2(0,0);
 var Mouse_delta = new THREE.Vector2(0,0);
 
-var protein = new THREE.PointCloud( new THREE.BufferGeometry(), new THREE.PointCloudMaterial );
+var protein = new THREE.PointCloud( new THREE.BufferGeometry(), new THREE.PointCloudMaterial() ); //should have an () there!!
 var protein_array = Array(20);
 var anchor_points = Array(3);
-var protein_colors = new Float32Array(protein_vertices_numbers.length);
 var atom_vertices_components;
 var virtual_icosahedron_vertices = Array(12);
 var protein_vertices_indices = Array(20);
+
+var DNA_cage;
+var correction_rotation = 0;
 
 //-------------These things should ONLY be referenced in Inputgetter
 var InputObject = {};

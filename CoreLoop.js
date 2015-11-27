@@ -1,7 +1,8 @@
 function UpdateWorld(){
 	update_mouseblob();
 	
-	update_protein()
+	update_protein();
+	update_DNA_cage();
 }
 
 function render() {
