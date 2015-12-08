@@ -9,35 +9,11 @@ function update_DNA_cage(){
 		MovementAxis.normalize();
 		DNA_cage.rotateOnAxis(MovementAxis, MovementAngle);
 		DNA_cage.updateMatrixWorld();
-		
-		
-		//var correction_rotation = -TAU * 0.016;
-		correction_rotation += 0.0004;
-		console.log(correction_rotation);
-		for(var i = 0; i<60; i++){
-			var strand_avg = new THREE.Vector3();
-			for(var j = 0; j<50; j++){
-				strand_avg.x += DNA_cage.geometry.attributes.position.array[(i*50+j)*3+0];
-				strand_avg.y += DNA_cage.geometry.attributes.position.array[(i*50+j)*3+1];
-				strand_avg.z += DNA_cage.geometry.attributes.position.array[(i*50+j)*3+2];
-			}
-			strand_avg.normalize();
-			for(var j = 0; j<50; j++){
-				var ourpoint = new THREE.Vector3(DNA_vertices_numbers[(i*50+j)*3+0],DNA_vertices_numbers[(i*50+j)*3+1],DNA_vertices_numbers[(i*50+j)*3+2]);
-				ourpoint.applyAxisAngle(strand_avg,-0.0004);
-				
-				DNA_cage.geometry.attributes.position.array[(i*50+j)*3+0] = ourpoint.x;
-				DNA_cage.geometry.attributes.position.array[(i*50+j)*3+1] = ourpoint.y;
-				DNA_cage.geometry.attributes.position.array[(i*50+j)*3+2] = ourpoint.z;
-			}
-		}
-		DNA_cage.geometry.attributes.position.needsUpdate = true;
-		//so to correct them we want to rotate around an axis pointing at the average position
 	}
 }
 
 function init_DNA_cage(){
-	DNA_cage = new THREE.Line( new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color: 0xf0f00f}), THREE.LinePieces);
+	DNA_cage = new THREE.Line( new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color: 0xf0f00f,vertexColors: THREE.VertexColors}), THREE.LinePieces);
 	 
 	var avg = new THREE.Vector3();
 	for(var i = 0; i<DNA_vertices_numbers.length / 3; i++){
@@ -61,40 +37,80 @@ function init_DNA_cage(){
 	
 	
 	DNA_cage.geometry.addAttribute( 'position', new THREE.BufferAttribute( DNA_vertices_numbers, 3 ) );
-	var DNA_colors = new Float32Array(DNA_vertices_numbers.length);
-	DNA_cage.geometry.addAttribute( 'color', new THREE.BufferAttribute(DNA_colors, 3) );
 	
-	var DNA_line_pairs = new Uint16Array(DNA_vertices_numbers.length / 3 * 2)
+	var correction_rotation = -0.1; //gotten "heuristically"
+	console.log(correction_rotation);
+	for(var i = 0; i<60; i++){
+		var strand_avg = new THREE.Vector3();
+		for(var j = 0; j<50; j++){
+			strand_avg.x += DNA_cage.geometry.attributes.position.array[(i*50+j)*3+0];
+			strand_avg.y += DNA_cage.geometry.attributes.position.array[(i*50+j)*3+1];
+			strand_avg.z += DNA_cage.geometry.attributes.position.array[(i*50+j)*3+2];
+		}
+//		strand_avg.multiplyScalar(3 / DNA_cage.geometry.attributes.position.array.length);
+//		strand_avg //so what would be nice would be to rotate them a bit so that you remove those kinks. Some cross product.
+		strand_avg.normalize(); //not a great way of doing it.
+		for(var j = 0; j<50; j++){
+			var ourpoint = new THREE.Vector3(DNA_vertices_numbers[(i*50+j)*3+0],DNA_vertices_numbers[(i*50+j)*3+1],DNA_vertices_numbers[(i*50+j)*3+2]);
+			ourpoint.applyAxisAngle(strand_avg,correction_rotation);
+			
+			DNA_cage.geometry.attributes.position.array[(i*50+j)*3+0] = ourpoint.x;
+			DNA_cage.geometry.attributes.position.array[(i*50+j)*3+1] = ourpoint.y;
+			DNA_cage.geometry.attributes.position.array[(i*50+j)*3+2] = ourpoint.z;
+		}
+	}
+	DNA_cage.geometry.attributes.position.needsUpdate = true;
+	
+	var DNA_colors = new Float32Array(DNA_vertices_numbers.length);
+	var DNA_line_pairs = new Uint16Array(DNA_vertices_numbers.length / 3 * 2);
 	
 	for(var i = 0; i<60;i++){ //each of the 60 strands has 50 "atoms"
 		for(var j = 0; j<50; j++){
 			if(j==49){
-				DNA_line_pairs[ 2*(i*50+j) ] = i*50+j-1;
-				DNA_line_pairs[2*(i*50+j)+1] = i*50+j-1; //we do something special here to join them, probably
-				//search through all the points at the beginnings and ends of other strands, find whose first atom is closest.
+				var closest_quadrance_so_far = 10000;
+				var closest_index_so_far = 666;
 				
-				DNA_colors[(i*50+j)*3+0] = 0; DNA_colors[(i*50+j)*3+1] = 0; DNA_colors[(i*50+j)*3+2] = 0;
-			}
-			else if(j%2==0) {//base
-				DNA_line_pairs[ 2*(i*50+j) ] = 0;
-				DNA_line_pairs[2*(i*50+j)+1] = 0;
+				for( var k = 0; k < 60; k++){
+					if(k==i)
+						continue;
+					
+					if(quadrance_between_DNA_points(i*50+j,k*50) < closest_quadrance_so_far){
+						closest_index_so_far = k*50;
+						closest_quadrance_so_far = quadrance_between_DNA_points(i*50+j,k*50);
+					}
+					if(quadrance_between_DNA_points(i*50+j,k*50+49) < closest_quadrance_so_far){
+						closest_index_so_far = k*50+49;
+						closest_quadrance_so_far = quadrance_between_DNA_points(i*50+j,k*50+49);
+					}
+				}
+				
+				DNA_line_pairs[ 2*(i*50+j) ] = i*50+j-1;
+				DNA_line_pairs[2*(i*50+j)+1] = closest_index_so_far;
 				
 				DNA_colors[(i*50+j)*3+0] = 1; DNA_colors[(i*50+j)*3+1] = 0; DNA_colors[(i*50+j)*3+2] = 0;
+			}
+			else if(j%2==0) {//base
+				DNA_line_pairs[ 2*(i*50+j) ] = i*50+j;
+				DNA_line_pairs[2*(i*50+j)+1] = i*50+j+1;
+				
+				DNA_colors[(i*50+j)*3+0] = 0; DNA_colors[(i*50+j)*3+1] = 0; DNA_colors[(i*50+j)*3+2] = 0;
 			}
 			else {//backbone
 				DNA_line_pairs[ 2*(i*50+j) ] = i*50+j-1;
 				DNA_line_pairs[2*(i*50+j)+1] = i*50+j+1;
 				
-				DNA_colors[(i*50+j)*3+0] = 0; DNA_colors[(i*50+j)*3+1] = 0; DNA_colors[(i*50+j)*3+2] = 0;
+				DNA_colors[(i*50+j)*3+0] = 1; DNA_colors[(i*50+j)*3+1] = 0; DNA_colors[(i*50+j)*3+2] = 0;
 			}
 		}
-	} 
-	
-//	for(var i = 0; i < 6000; i++){
-//		DNA_line_pairs[i] = 0;
-//	}
-//	DNA_line_pairs[0] = 0
-	
-	console.log(DNA_cage.geometry);
+	}
+	DNA_cage.geometry.addAttribute( 'color', new THREE.BufferAttribute(DNA_colors, 3) );
 	DNA_cage.geometry.addAttribute( 'index', new THREE.BufferAttribute( DNA_line_pairs, 1 ) );
+}
+
+function quadrance_between_DNA_points(index1,index2){
+	var dX = DNA_cage.geometry.attributes.position.array[index1*3+0] - DNA_cage.geometry.attributes.position.array[index2*3+0];
+	var dY = DNA_cage.geometry.attributes.position.array[index1*3+1] - DNA_cage.geometry.attributes.position.array[index2*3+1];
+	var dZ = DNA_cage.geometry.attributes.position.array[index1*3+2] - DNA_cage.geometry.attributes.position.array[index2*3+2];
+	
+	return dX*dX + dY*dY + dZ*dZ;
 }
