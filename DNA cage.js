@@ -1,17 +1,3 @@
-function update_DNA_cage(){
-	if(isMouseDown){
-		var MovementVector = Mouse_delta.clone();
-		var MovementAngle = MovementVector.length() / 3;
-		
-		var MovementAxis = new THREE.Vector3(-MovementVector.y, MovementVector.x, 0);
-		
-		DNA_cage.worldToLocal(MovementAxis);
-		MovementAxis.normalize();
-		DNA_cage.rotateOnAxis(MovementAxis, MovementAngle);
-		DNA_cage.updateMatrixWorld();
-	}
-}
-
 function init_DNA_cage(){
 	DNA_cage = new THREE.Line( new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color: 0xf0f00f,vertexColors: THREE.VertexColors}), THREE.LinePieces);
 	 
@@ -22,8 +8,7 @@ function init_DNA_cage(){
 		avg.z += DNA_vertices_numbers[i*3+2];
 	}
 	avg.multiplyScalar(3/DNA_vertices_numbers.length);
-	console.log(avg)
-	var scaleFactor = 2.3/109; //this sort of says "we want the first point to be 3 away from the center"
+	var scaleFactor = 0.87*2.3/109; //chosen quite arbitrarily, can change a lot
 	for(var i = 0; i<DNA_vertices_numbers.length / 3; i++){
 		DNA_vertices_numbers[i*3+0] -= avg.x;
 		DNA_vertices_numbers[i*3+1] -= avg.y;
@@ -35,31 +20,59 @@ function init_DNA_cage(){
 	}
 	
 	
-	
-	DNA_cage.geometry.addAttribute( 'position', new THREE.BufferAttribute( DNA_vertices_numbers, 3 ) );
-	
-	var correction_rotation = -0.1; //gotten "heuristically"
-	console.log(correction_rotation);
+	var yaw_correction_rotation = -0.1; //gotten "heuristically"
 	for(var i = 0; i<60; i++){
 		var strand_avg = new THREE.Vector3();
 		for(var j = 0; j<50; j++){
-			strand_avg.x += DNA_cage.geometry.attributes.position.array[(i*50+j)*3+0];
-			strand_avg.y += DNA_cage.geometry.attributes.position.array[(i*50+j)*3+1];
-			strand_avg.z += DNA_cage.geometry.attributes.position.array[(i*50+j)*3+2];
+			strand_avg.x += DNA_vertices_numbers[(i*50+j)*3+0];
+			strand_avg.y += DNA_vertices_numbers[(i*50+j)*3+1];
+			strand_avg.z += DNA_vertices_numbers[(i*50+j)*3+2];
 		}
-//		strand_avg.multiplyScalar(3 / DNA_cage.geometry.attributes.position.array.length);
-//		strand_avg //so what would be nice would be to rotate them a bit so that you remove those kinks. Some cross product.
-		strand_avg.normalize(); //not a great way of doing it.
+		strand_avg.multiplyScalar( 1 / 50);
+		
+		var yaw_correction_axis = strand_avg.clone();
+		yaw_correction_axis.normalize(); //not a great way of doing it.
 		for(var j = 0; j<50; j++){
 			var ourpoint = new THREE.Vector3(DNA_vertices_numbers[(i*50+j)*3+0],DNA_vertices_numbers[(i*50+j)*3+1],DNA_vertices_numbers[(i*50+j)*3+2]);
-			ourpoint.applyAxisAngle(strand_avg,correction_rotation);
+			ourpoint.applyAxisAngle(yaw_correction_axis,yaw_correction_rotation);
 			
-			DNA_cage.geometry.attributes.position.array[(i*50+j)*3+0] = ourpoint.x;
-			DNA_cage.geometry.attributes.position.array[(i*50+j)*3+1] = ourpoint.y;
-			DNA_cage.geometry.attributes.position.array[(i*50+j)*3+2] = ourpoint.z;
+			DNA_vertices_numbers[(i*50+j)*3+0] = ourpoint.x;
+			DNA_vertices_numbers[(i*50+j)*3+1] = ourpoint.y;
+			DNA_vertices_numbers[(i*50+j)*3+2] = ourpoint.z;
+		}
+
+		//so what would be nice would be to rotate them a bit so that you remove those kinks. Some cross product.
+		var firstbackbonepoint_index = i * 50;
+		var lastbackbonepoint_index = i * 50 + 48;
+		var firstbackbonepoint_to_lastbackbonepoint = new THREE.Vector3(
+			DNA_vertices_numbers[lastbackbonepoint_index*3+0]-DNA_vertices_numbers[firstbackbonepoint_index*3+0],
+			DNA_vertices_numbers[lastbackbonepoint_index*3+1]-DNA_vertices_numbers[firstbackbonepoint_index*3+1],
+			DNA_vertices_numbers[lastbackbonepoint_index*3+2]-DNA_vertices_numbers[firstbackbonepoint_index*3+2]);
+		var pitch_axis_origin = firstbackbonepoint_to_lastbackbonepoint.clone();
+		pitch_axis_origin.multiplyScalar(0.5);
+		pitch_axis_origin.x += DNA_vertices_numbers[firstbackbonepoint_index*3+0];
+		pitch_axis_origin.y += DNA_vertices_numbers[firstbackbonepoint_index*3+1];
+		pitch_axis_origin.z += DNA_vertices_numbers[firstbackbonepoint_index*3+2];
+		var pitch_axis = new THREE.Vector3();
+		pitch_axis.crossVectors(pitch_axis_origin,firstbackbonepoint_to_lastbackbonepoint);
+		pitch_axis.normalize();
+		
+		for(var j = 0; j<50; j++){
+			var ourpoint = new THREE.Vector3(DNA_vertices_numbers[(i*50+j)*3+0],DNA_vertices_numbers[(i*50+j)*3+1],DNA_vertices_numbers[(i*50+j)*3+2]);
+			ourpoint.sub(pitch_axis_origin);
+			ourpoint.applyAxisAngle(pitch_axis,0.07);
+			ourpoint.add(pitch_axis_origin);
+			
+			DNA_vertices_numbers[(i*50+j)*3+0] = ourpoint.x;
+			DNA_vertices_numbers[(i*50+j)*3+1] = ourpoint.y;
+			DNA_vertices_numbers[(i*50+j)*3+2] = ourpoint.z;
 		}
 	}
-	DNA_cage.geometry.attributes.position.needsUpdate = true;
+	
+
+	
+	DNA_cage.geometry.addAttribute( 'position', new THREE.BufferAttribute( DNA_vertices_numbers, 3 ) );
+	
 	
 	var DNA_colors = new Float32Array(DNA_vertices_numbers.length);
 	var DNA_line_pairs = new Uint16Array(DNA_vertices_numbers.length / 3 * 2);
@@ -78,33 +91,40 @@ function init_DNA_cage(){
 						closest_index_so_far = k*50;
 						closest_quadrance_so_far = quadrance_between_DNA_points(i*50+j,k*50);
 					}
-					if(quadrance_between_DNA_points(i*50+j,k*50+49) < closest_quadrance_so_far){
-						closest_index_so_far = k*50+49;
-						closest_quadrance_so_far = quadrance_between_DNA_points(i*50+j,k*50+49);
+					if(quadrance_between_DNA_points(i*50+j,k*50+48) < closest_quadrance_so_far){
+						closest_index_so_far = k*50+48;
+						closest_quadrance_so_far = quadrance_between_DNA_points(i*50+j,k*50+48);
 					}
 				}
 				
+				//imaginary backbone
 				DNA_line_pairs[ 2*(i*50+j) ] = i*50+j-1;
 				DNA_line_pairs[2*(i*50+j)+1] = closest_index_so_far;
 				
-				DNA_colors[(i*50+j)*3+0] = 1; DNA_colors[(i*50+j)*3+1] = 0; DNA_colors[(i*50+j)*3+2] = 0;
+				//color is a base
+				DNA_colors[(i*50+j)*3+0] = 245/255; DNA_colors[(i*50+j)*3+1] = 220/255; DNA_colors[(i*50+j)*3+2] = 176/255;
 			}
 			else if(j%2==0) {//base
 				DNA_line_pairs[ 2*(i*50+j) ] = i*50+j;
 				DNA_line_pairs[2*(i*50+j)+1] = i*50+j+1;
 				
-				DNA_colors[(i*50+j)*3+0] = 0; DNA_colors[(i*50+j)*3+1] = 0; DNA_colors[(i*50+j)*3+2] = 0;
+				//color is backbone
+				DNA_colors[(i*50+j)*3+0] = 208/255; DNA_colors[(i*50+j)*3+1] = 87/255; DNA_colors[(i*50+j)*3+2] = 106/255;
 			}
 			else {//backbone
 				DNA_line_pairs[ 2*(i*50+j) ] = i*50+j-1;
 				DNA_line_pairs[2*(i*50+j)+1] = i*50+j+1;
 				
-				DNA_colors[(i*50+j)*3+0] = 1; DNA_colors[(i*50+j)*3+1] = 0; DNA_colors[(i*50+j)*3+2] = 0;
+				//color is a base
+				DNA_colors[(i*50+j)*3+0] = 245/255; DNA_colors[(i*50+j)*3+1] = 220/255; DNA_colors[(i*50+j)*3+2] = 176/255;
 			}
 		}
 	}
 	DNA_cage.geometry.addAttribute( 'color', new THREE.BufferAttribute(DNA_colors, 3) );
 	DNA_cage.geometry.addAttribute( 'index', new THREE.BufferAttribute( DNA_line_pairs, 1 ) );
+	
+	//because it ain't perfect
+	DNA_cage.quaternion.set(-0.0028151799901586245, -0.03798590756432208, -0.09772936010824641, 0.9944838448969249);
 }
 
 function quadrance_between_DNA_points(index1,index2){

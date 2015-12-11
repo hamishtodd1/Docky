@@ -1,8 +1,7 @@
 function UpdateWorld(){
 	update_mouseblob();
 	
-	update_protein();
-	update_DNA_cage();
+	update_bocavirus();
 }
 
 function render() {

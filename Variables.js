@@ -1,5 +1,6 @@
 var TAU = Math.PI * 2;
 var PHI = (1+Math.sqrt(5))/2;
+var HS3 = Math.sqrt(3)/2;
 
 //--------------Technologically fundamental
 var playing_field_width = 6;
@@ -24,22 +25,24 @@ var delta_t = 0;
 
 var logged = 0;
 
+//-------------These things should ONLY be referenced in Inputgetter
+var InputObject = {};
+InputObject.mousex = window_width/2+30;
+InputObject.mousey = window_height/2+30;
+InputObject.isMouseDown = false;
+
 //------------------Less fundamental
 var mouseblob;
 
-//urgh do they need to be "children" or something? Would that compromise the buffer thing?
-var molecules;
-
 var indicatorblob = new THREE.Vector3(0,0,0);
-
-var selected_object = 0; //i for anchor point i+1, 4 for protein
 
 var isMouseDown = false;
 var MousePosition = new THREE.Vector2(0,0);
 var OldMousePosition = new THREE.Vector2(0,0);
 var Mouse_delta = new THREE.Vector2(0,0);
 
-var protein = new THREE.PointCloud( new THREE.BufferGeometry(), new THREE.PointCloudMaterial() ); //should have an () there!!
+//----everything to be exported
+var protein = new THREE.Mesh( new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({color:0xf0f00f}) );
 var protein_array = Array(20);
 var anchor_points = Array(3);
 var atom_vertices_components;
@@ -47,10 +50,6 @@ var virtual_icosahedron_vertices = Array(12);
 var protein_vertices_indices = Array(20);
 
 var DNA_cage;
-var correction_rotation = 0;
+var MovementAngle = 0;
+var MovementAxis = new THREE.Vector3(1,1,1);
 
-//-------------These things should ONLY be referenced in Inputgetter
-var InputObject = {};
-InputObject.mousex = window_width/2+30;
-InputObject.mousey = window_height/2+30;
-InputObject.isMouseDown = false;

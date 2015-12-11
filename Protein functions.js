@@ -1,46 +1,24 @@
-//better for thinking about data if it's one protein per object, and maybe for animations.
-//But better for CK part?
-
-function update_protein() {
-	if(!isMouseDown) {
-		selected_object = 0;
-		anchor_points[0].material.color.r = 1;
-		anchor_points[1].material.color.r = 1;
-		anchor_points[2].material.color.r = 1;
-	}
-	
+function update_bocavirus() {	
 	if(isMouseDown) {
-		if(selected_object == 0 ){ //nothing selected, we must select the thing
-			var mouse_dist_from_protein = Math.sqrt(Math.pow(MousePosition.x - protein.position.x,2) + Math.pow(MousePosition.y - protein.position.y,2));
-			var protein_radius = 2;
-			selected_object = 4; //protein selected
-		}
-		
-		if(selected_object == 4){
-//			protein.position.x+=Mouse_delta.x;
-//			protein.position.y+=Mouse_delta.y;
-			var MovementVector = Mouse_delta.clone();
-			var MovementAngle = MovementVector.length() / 3;
-			
-			var MovementAxis = new THREE.Vector3(-MovementVector.y, MovementVector.x, 0);
-			MovementAxis.normalize();
-			
-			for(var i = 0; i<virtual_icosahedron_vertices.length; i++)
-				virtual_icosahedron_vertices[i].applyAxisAngle(MovementAxis, MovementAngle);
-		}
-		
-		if(selected_object == 1 || selected_object == 2 || selected_object == 3){
-			anchor_points[selected_object-1].material.color.r = 0;
-			var moving_index = selected_object - 1;
-			anchor_points[moving_index].position.x = MousePosition.x;
-			anchor_points[moving_index].position.y = MousePosition.y;
-		}
+		MovementAngle = Mouse_delta.length() / 3;
+		MovementAxis.set(-Mouse_delta.y, Mouse_delta.x, 0);
+		MovementAxis.normalize();
 	}
-//	fix_protein_to_anchors(anchor_points[0].position, anchor_points[1].position, anchor_points[2].position, protein);
-	for(var i = 0; i<protein_array.length; i++)
+	else {
+		MovementAngle *= 0; //or something better
+	}
+		
+	DNA_cage.worldToLocal(MovementAxis);
+	DNA_cage.rotateOnAxis(MovementAxis, MovementAngle);
+	DNA_cage.updateMatrixWorld();
+	for(var i = 0; i<virtual_icosahedron_vertices.length; i++)
+		virtual_icosahedron_vertices[i].applyAxisAngle(MovementAxis, MovementAngle);
+
+	for(var i = 0; i<protein_array.length; i++){
 		fix_protein_to_anchors(	virtual_icosahedron_vertices[protein_vertices_indices[i][0]],
 								virtual_icosahedron_vertices[protein_vertices_indices[i][1]],
 								virtual_icosahedron_vertices[protein_vertices_indices[i][2]], protein_array[i]);
+	}
 }
 
 //this function won't alter the passed vectors
@@ -54,9 +32,9 @@ function fix_protein_to_anchors(desired_corner0,desired_corner1,desired_corner2,
 	basis_vec0.crossVectors(basis_vec1, basis_vec2);
 	
 	for(var i = 0; i < protein.geometry.attributes.position.array.length / 3; i++){
-		myprotein.geometry.attributes.position.array[i*3+0] = atom_vertices_components[i][0] * basis_vec0.x + atom_vertices_components[i][1] * basis_vec1.x + atom_vertices_components[i][2] * basis_vec2.x;
-		myprotein.geometry.attributes.position.array[i*3+1] = atom_vertices_components[i][0] * basis_vec0.y + atom_vertices_components[i][1] * basis_vec1.y + atom_vertices_components[i][2] * basis_vec2.y;
-		myprotein.geometry.attributes.position.array[i*3+2] = atom_vertices_components[i][0] * basis_vec0.z + atom_vertices_components[i][1] * basis_vec1.z + atom_vertices_components[i][2] * basis_vec2.z;
+		myprotein.geometry.attributes.position.array[i*3+0] = atom_vertices_components[i*3+0] * basis_vec0.x + atom_vertices_components[i*3+1] * basis_vec1.x + atom_vertices_components[i*3+2] * basis_vec2.x;
+		myprotein.geometry.attributes.position.array[i*3+1] = atom_vertices_components[i*3+0] * basis_vec0.y + atom_vertices_components[i*3+1] * basis_vec1.y + atom_vertices_components[i*3+2] * basis_vec2.y;
+		myprotein.geometry.attributes.position.array[i*3+2] = atom_vertices_components[i*3+0] * basis_vec0.z + atom_vertices_components[i*3+1] * basis_vec1.z + atom_vertices_components[i*3+2] * basis_vec2.z;
 	}
 	
 	myprotein.position.copy(desired_corner0);
@@ -96,35 +74,15 @@ function init_static_capsid() {
 	protein_vertices_indices[18] = new Uint16Array([6,1,7]);
 	protein_vertices_indices[19] = new Uint16Array([6,7,11]);
 	
-	for(var i = 0; i < protein_vertices_numbers.length; i++){
-		protein_vertices_numbers[i] /= 32; 
+	//we got that wrong
+	for(var i = 0; i < 20; i++){
+		var temp = protein_vertices_indices[i][1];
+		protein_vertices_indices[i][1] = protein_vertices_indices[i][2];
+		protein_vertices_indices[i][2] = temp;
 	}
 	
-	var protein_center = 0;
-	for(var i = 0; i < protein_vertices_numbers.length / 3; i++)
-		protein_center += Math.abs( protein_vertices_numbers[i*3] + protein_vertices_numbers[i*3+1] + protein_vertices_numbers[i*3+2] );
-	protein_center /= Math.sqrt(3);  //for vector (x,y,z), perp distance from the plane perp to the vector (1,1,1) through the origin = abs(x+y+z) / sqrt(3) 
-	protein_center /= protein_vertices_numbers.length / 3;
-	
-	console.log(protein_vertices_numbers.length / 3 / 3);
-	
-	protein.material.size = 6;//1.6;
-	protein.material.sizeAttenuation = false;
-	protein.material.vertexColors = THREE.VertexColors;
-	
-	var protein_colors = new Float32Array(protein_vertices_numbers.length);
-	for( var i = 0; i < protein_vertices_numbers.length / 3 / 3; i++){
-		protein_colors[i*3 + 0] = 0.5;
-		protein_colors[i*3 + 1] = 0;
-		protein_colors[i*3 + 2] = 1;
-		
-		protein_colors[i*3 + 0 + 3*protein_vertices_numbers.length / 3 / 3] = 1;
-		protein_colors[i*3 + 1 + 3*protein_vertices_numbers.length / 3 / 3] = 1;
-		protein_colors[i*3 + 2 + 3*protein_vertices_numbers.length / 3 / 3] = 0;
-		
-		protein_colors[i*3 + 0 + 6*protein_vertices_numbers.length / 3 / 3] = 0;
-		protein_colors[i*3 + 1 + 6*protein_vertices_numbers.length / 3 / 3] = 0.5;
-		protein_colors[i*3 + 2 + 6*protein_vertices_numbers.length / 3 / 3] = 1;
+	for(var i = 0; i < protein_vertices_numbers.length; i++){
+		protein_vertices_numbers[i] /= 32; 
 	}
 	
 	var threefold_axis = new THREE.Vector3(1,1,1);
@@ -143,27 +101,39 @@ function init_static_capsid() {
 		protein_vertices_numbers[i*3 + 2 + 2*protein_vertices_numbers.length / 3] = point.z;
 	}
 	protein.geometry.addAttribute( 'position', new THREE.BufferAttribute( protein_vertices_numbers, 3 ) );
-	protein.geometry.addAttribute( 'color', new THREE.BufferAttribute(protein_colors, 3) );
 	
-	var anchorpointmaterial = new THREE.MeshLambertMaterial({
-		color: 0xf0f00f
-	});
+	for(var i = coarse_protein_triangle_indices.length / 3; i<coarse_protein_triangle_indices.length * 2 / 3; i++){
+		coarse_protein_triangle_indices[i] += protein_vertices_numbers.length / 3 / 3;
+	}
+	for(var i = coarse_protein_triangle_indices.length * 2 / 3; i<coarse_protein_triangle_indices.length; i++){
+		coarse_protein_triangle_indices[i] += protein_vertices_numbers.length / 3 / 3 * 2;
+	}
+	protein.geometry.addAttribute( 'index', new THREE.BufferAttribute( coarse_protein_triangle_indices, 1 ) );
+	protein.geometry.computeFaceNormals();
+	protein.geometry.computeVertexNormals();
+	
+	/* for vector (x,y,z), perp distance from the plane perp to the vector (1,1,1) through the origin = abs(x+y+z) / sqrt(3)
+	 * It is somewhat arbitrary to define that as the center though. It is a spherical sort of thing after all
+	 * In theory you should be able to multiply the below by a scalar without changing bocavirus.
+	 * You may want to do this in order to make larger viruses more contiguous.
+	 */
+	var protein_vertical_center = 0;
+	for(var i = 0; i < protein_vertices_numbers.length / 9; i++)
+		protein_vertical_center += Math.abs( protein_vertices_numbers[i*3] + protein_vertices_numbers[i*3+1] + protein_vertices_numbers[i*3+2] );
+	protein_vertical_center /= (protein_vertices_numbers.length / 9);
+	protein_vertical_center /= Math.sqrt(3);
+	
+	var anchorpointmaterial = new THREE.MeshLambertMaterial({color: 0xf0f00f});
 	for(var i = 0; i< anchor_points.length; i++){
 		anchor_points[i] = new THREE.Mesh( new THREE.SphereGeometry( 0.05 ), anchorpointmaterial.clone() );
 		if(i==0) anchor_points[i].position.set(1,PHI,0);
 		if(i==1) anchor_points[i].position.set(PHI,0,1);
 		if(i==2) anchor_points[i].position.set(0,1,PHI);
 		anchor_points[i].position.normalize();
-		anchor_points[i].position.multiplyScalar(protein_center * Math.sin(TAU/5) / (Math.sqrt(3)/12*(3+Math.sqrt(5))));
+		anchor_points[i].position.multiplyScalar(protein_vertical_center * Math.sin(TAU/5) / (Math.sqrt(3)/12*(3+Math.sqrt(5))));
 	}
 	
-	protein.position.copy(anchor_points[0].position);
-	for(var i = 0; i < protein.geometry.attributes.position.array.length / 3; i++){
-		protein.geometry.attributes.position.array[i*3+0] -= protein.position.x; 
-		protein.geometry.attributes.position.array[i*3+1] -= protein.position.y;
-		protein.geometry.attributes.position.array[i*3+2] -= protein.position.z;
-	}
-	
+	//to get the components, we need the inverse of the matrix of its current basis vectors
 	var basis_vec1 = anchor_points[1].position.clone();
 	basis_vec1.sub(anchor_points[0].position);
 	var basis_vec2 = anchor_points[2].position.clone();
@@ -175,23 +145,22 @@ function init_static_capsid() {
 						basis_vec0.y,basis_vec1.y,basis_vec2.y,	0,
 						basis_vec0.z,basis_vec1.z,basis_vec2.z,	0,
 						0,0,0,1);
-	
 	var conversion_matrix = new THREE.Matrix3();
 	conversion_matrix.getInverse(basis_matrix,1);
 	
-	atom_vertices_components = Array(protein.geometry.attributes.position.array.length / 3);
-	for(var i = 0; i<atom_vertices_components.length; i++){
-		atom_vertices_components[i] = new Float32Array(3);
-		atom_vertices_components[i][0] = protein.geometry.attributes.position.array[i*3+0] * conversion_matrix.elements[0] + protein.geometry.attributes.position.array[i*3+1] * conversion_matrix.elements[3] + protein.geometry.attributes.position.array[i*3+2] * conversion_matrix.elements[6];
-		atom_vertices_components[i][1] = protein.geometry.attributes.position.array[i*3+0] * conversion_matrix.elements[1] + protein.geometry.attributes.position.array[i*3+1] * conversion_matrix.elements[4] + protein.geometry.attributes.position.array[i*3+2] * conversion_matrix.elements[7];
-		atom_vertices_components[i][2] = protein.geometry.attributes.position.array[i*3+0] * conversion_matrix.elements[2] + protein.geometry.attributes.position.array[i*3+1] * conversion_matrix.elements[5] + protein.geometry.attributes.position.array[i*3+2] * conversion_matrix.elements[8];
+	protein.position.copy(anchor_points[0].position);
+	for(var i = 0; i < protein.geometry.attributes.position.array.length / 3; i++){
+		protein.geometry.attributes.position.array[i*3+0] -= protein.position.x; 
+		protein.geometry.attributes.position.array[i*3+1] -= protein.position.y;
+		protein.geometry.attributes.position.array[i*3+2] -= protein.position.z;
 	}
 	
-	for(var i = 0; i<protein_array.length; i++){
-		protein_array[i] = new THREE.PointCloud( protein.geometry.clone(), protein.material.clone());
-		protein_array[i].fix_to_anchors = protein.fix_to_anchors;
+	atom_vertices_components = new Float32Array( protein.geometry.attributes.position.array.length );
+	for(var i = 0; i<atom_vertices_components.length; i++){
+		atom_vertices_components[i*3+0] = protein.geometry.attributes.position.array[i*3+0] * conversion_matrix.elements[0] + protein.geometry.attributes.position.array[i*3+1] * conversion_matrix.elements[3] + protein.geometry.attributes.position.array[i*3+2] * conversion_matrix.elements[6];
+		atom_vertices_components[i*3+1] = protein.geometry.attributes.position.array[i*3+0] * conversion_matrix.elements[1] + protein.geometry.attributes.position.array[i*3+1] * conversion_matrix.elements[4] + protein.geometry.attributes.position.array[i*3+2] * conversion_matrix.elements[7];
+		atom_vertices_components[i*3+2] = protein.geometry.attributes.position.array[i*3+0] * conversion_matrix.elements[2] + protein.geometry.attributes.position.array[i*3+1] * conversion_matrix.elements[5] + protein.geometry.attributes.position.array[i*3+2] * conversion_matrix.elements[8];
 	}
-	console.log(protein, protein_array[0]);
 	
 	virtual_icosahedron_vertices[0] = new THREE.Vector3(0, 		1,   PHI);
 	virtual_icosahedron_vertices[1] = new THREE.Vector3( PHI,	0, 	 1);
@@ -206,11 +175,33 @@ function init_static_capsid() {
 	virtual_icosahedron_vertices[10] = new THREE.Vector3(0, 	1,	 -PHI);
 	virtual_icosahedron_vertices[11] = new THREE.Vector3(0,		-1,	 -PHI);
 	
-	var edgelen = virtual_icosahedron_vertices[0].distanceTo(virtual_icosahedron_vertices[1]);
-	lowest_unused_protein = 0;
+	for(var i = 0; i < virtual_icosahedron_vertices.length; i++)
+		virtual_icosahedron_vertices[i].multiplyScalar(1.45);
 	
-	for(var i = 0; i<protein_array.length; i++)
+	for(var i = 0; i<protein_array.length; i++){
+		protein_array[i] = new THREE.Mesh( protein.geometry.clone(), protein.material.clone());
+
 		fix_protein_to_anchors(	virtual_icosahedron_vertices[protein_vertices_indices[i][0]],
 								virtual_icosahedron_vertices[protein_vertices_indices[i][1]],
 								virtual_icosahedron_vertices[protein_vertices_indices[i][2]], protein_array[i]);
+	}
+	
+	{
+		var lights = [];
+		
+		lights[0] = new THREE.PointLight( 0xffffff, 0.6 );
+		lights[1] = new THREE.PointLight( 0xffffff, 0.6 );
+		lights[2] = new THREE.PointLight( 0xffffff, 0.6 );
+		lights[3] = new THREE.PointLight( 0xffffff, 0.6 );
+		
+		lights[0].position.set( 0, 100, 30 );
+		lights[1].position.set( 100, 0, 30 );
+		lights[2].position.set( -100, 0, 30 );
+		lights[3].position.set( 0, -100, 30 );
+	
+		scene.add( lights[0] );
+		scene.add( lights[1] );
+		scene.add( lights[2] );
+		scene.add( lights[3] );
+	}
 }
