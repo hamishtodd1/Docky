@@ -20,7 +20,8 @@ function init_DNA_cage(){
 	}
 	
 	
-	var yaw_correction_rotation = -0.1; //gotten "heuristically"
+	var yaw_correction_rotation = -0.076; //gotten "heuristically"
+	var pitch_correction_rotation = 0.07;
 	for(var i = 0; i<60; i++){
 		var strand_avg = new THREE.Vector3();
 		for(var j = 0; j<50; j++){
@@ -60,7 +61,7 @@ function init_DNA_cage(){
 		for(var j = 0; j<50; j++){
 			var ourpoint = new THREE.Vector3(DNA_vertices_numbers[(i*50+j)*3+0],DNA_vertices_numbers[(i*50+j)*3+1],DNA_vertices_numbers[(i*50+j)*3+2]);
 			ourpoint.sub(pitch_axis_origin);
-			ourpoint.applyAxisAngle(pitch_axis,0.07);
+			ourpoint.applyAxisAngle(pitch_axis,pitch_correction_rotation);
 			ourpoint.add(pitch_axis_origin);
 			
 			DNA_vertices_numbers[(i*50+j)*3+0] = ourpoint.x;

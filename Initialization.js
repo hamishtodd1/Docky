@@ -6,9 +6,8 @@ function Init(){
 //	scene.add( indicatorblob );
 	
 	init_static_capsid();
-//	for(var i = 0; i<protein_array.length; i++)
-//		scene.add(protein_array[i]);
-	
+	for(var i = 0; i<protein_array.length; i++)
+		scene.add(protein_array[i]);	
 	init_DNA_cage();
 	scene.add(DNA_cage);                             
 }

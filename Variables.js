@@ -46,10 +46,10 @@ var protein = new THREE.Mesh( new THREE.BufferGeometry(), new THREE.MeshLambertM
 var protein_array = Array(20);
 var anchor_points = Array(3);
 var atom_vertices_components;
-var virtual_icosahedron_vertices = Array(12);
+var bocavirus_vertices = Array(12);
 var protein_vertices_indices = Array(20);
 
 var DNA_cage;
-var MovementAngle = 0;
-var MovementAxis = new THREE.Vector3(1,1,1);
+var bocavirus_MovementAngle = 0;
+var bocavirus_MovementAxis = new THREE.Vector3(1,0,0);
 
